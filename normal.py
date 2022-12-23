@@ -8,37 +8,34 @@ class Node:
         # Символ (В верхних нодах будет суммой всех нижних)
         self.symbol = symbol
 
-        # Дочерниий объект (Нода)
+        # Дочерниий объект слева (Нода)
         self.left = left
 
-        # right node
+        # Дочерниий объект справа (Нода)
         self.right = right
 
-        # 1 или 0
+        # 1 или 0 
         self.code = ""
 
 
 codes = dict()
 
 
-def getCodes(node, value=''):
-    newValue = value + str(node.code)
-
-    if (node.left or node.right):
-        getCodes(node.left, newValue)
-        getCodes(node.right, newValue)
-    else:
-        codes[node.symbol] = newValue
-
-    return codes
-
-
 def encode(text):
+    def getCodes(node, value=''):
+        newValue = value + str(node.code)
+
+        if (node.left or node.right):
+            getCodes(node.left, newValue)
+            getCodes(node.right, newValue)
+        else:
+            codes[node.symbol] = newValue
+
+        return codes
+
     chances = []
     alphabet = []
 
-    text = text.replace("\n", "Ⓐ")
-    # print(text)
     for character in text:
         if character not in alphabet:
             chance = text.count(character)
@@ -66,57 +63,79 @@ def encode(text):
         right.code = 0
 
         # combine the 2 smallest nodes to create new node
-        newNode = Node(left.prob+right.prob, left.symbol +
-                       right.symbol, left, right)
+        newNode = Node(left.prob + right.prob, left.symbol + right.symbol, left, right)
 
         nodes.remove(left)
         nodes.remove(right)
         nodes.append(newNode)
 
     symbolDictionnary = getCodes(nodes[0])
-    print("The result:", symbolDictionnary)
+    # print("The result:", symbolDictionnary)
+
+    # new=[[item,symbolDictionnary[item]] for item in symbolDictionnary]
+    # print(len(new))
+    # for i in range(len(new)):
+    #     print(new[i][0], new[i][1])
 
     result = ''
     for character in text:
         result += symbolDictionnary[character]
 
     print("Filesize before:", len(text) * 8, "bits")
-    print("Filesize after:",  len(result), "bits")
+    print("Filesize after:",  len(result), "bits (without the dictionnary)")
 
     return result, symbolDictionnary
 
 
 def decode(text, dictionnary):
-    arr = [[dictionnary[item], item]for item in dictionnary]
     decodedText = symbol = ''
     for character in text:
         symbol += character
-        for i in range(len(arr)):
-            if arr[i][1] == symbol:
-                decodedText += arr[i][0]
-                symbol = ''
-    return decodedText.replace("Ⓐ", "\n")
-
-
-
-# if len(sys.argv) < 4:
-#     raise "Not enough arguments"
-# else:
-#     method = sys.argv[1]
-#     input_file = sys.argv[2]
-#     output_file = sys.argv[3]
-# match method:
-#     case '--encode':
-#         encode(input_file,output_file)
-#     case '--decode':
-#         decode(input_file,output_file)
+        if symbol in dictionnary:
+            decodedText += dictionnary.get(symbol)
+            symbol = ''
+    return decodedText
 
 
 
 
+if len(sys.argv) != 4:
+    raise "Invalid agrument amount"
 
-text = "fuckdima"
-print(text)
-resultText, testDictionnary = encode(text)
-print("Encoded text", resultText)
-print("Decoded text", decode(resultText, {'111': ' ', '110': 'Ⓐ', '101': 'd', '100': 'i', '011': 'm', '010': 'a', '0011': 'f', '0010': 'u', '0001': 'c', '0000': 'k'}))
+encodeOrDecode = sys.argv[1]
+
+
+match encodeOrDecode:
+    case '--encode':
+        input_file = open(sys.argv[2], "r")
+        output_file = open(sys.argv[3], "wb")
+
+        textToEncode = input_file.readline()
+
+        result, dictionnary = encode(textToEncode)
+
+        # There should be outputting to a file, but it is in progress.
+
+    case '--decode':
+        input_file = open(sys.argv[2], "rb")
+        output_file = open(sys.argv[3], "w")
+
+        dictionnary = {}
+
+        dictionnaryLength = int(input_file.readline(), 2) # Считываем мощность словаря
+        for i in range(dictionnaryLength): # Считываем словарь
+            a, b = map(str, input_file.readline().split())
+            dictionnary.update({b: chr(int(a, 2))})
+        encodedText = input_file.readline()
+
+        result = decode(encodedText, dictionnary)
+
+        # There should be outputting to a file, but it is in progress.
+
+    case _:
+        raise "First argument should be either --encode or --decode"
+
+
+
+output_file.close()
+input_file.close()
